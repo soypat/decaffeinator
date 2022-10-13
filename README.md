@@ -1,2 +1,2 @@
 # decaffeinator
-An effort to releive the establishment of caffeine.
+An effort to relieve the establishment of caffeine.
