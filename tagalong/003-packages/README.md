@@ -2,11 +2,11 @@
 
 Every Go program is made up of packages.
 
-Programs start running in package main.
+Programs start running in package `main`.
 
 This program is using the packages with import paths "fmt" and "math/rand".
 
-By convention, the package name is the same as the last element of the import path. For instance, the "math/rand" package comprises files that begin with the statement package rand.
+By convention, the package name is the same as the last element of the import path. For instance, the "math/rand" package comprises files that begin with the statement package `rand`.
 
 Note: The environment in which these programs are executed is deterministic, so each time you run the example program rand.Intn will return the same number.
 
