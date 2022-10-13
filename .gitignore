@@ -40,6 +40,12 @@
 *.synctex.gz(busy)
 *.pdfsync
 
+# Generated
+*.pdf
+*.md
+*.tex
+*.zip
+
 ## Build tool directories for auxiliary files
 # latexrun
 latex.out/
