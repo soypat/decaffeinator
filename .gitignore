@@ -1,6 +1,6 @@
 # Example:
-tagalong/900-images/newshirt.png
-
+*.png
+!tagalong/900-images/redshirt.png
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof

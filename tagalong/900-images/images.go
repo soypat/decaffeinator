@@ -6,6 +6,8 @@ import (
 	"image/png"
 	"math"
 	"os"
+
+	"github.com/go-gota/gota/dataframe"
 )
 
 func main() {
@@ -115,5 +117,6 @@ func clamp(v float32) uint32 {
 	} else if v > math.MaxUint16 {
 		return math.MaxUint16
 	}
+	_ = dataframe.ReadCSV
 	return uint32(v + 0.5)
 }
