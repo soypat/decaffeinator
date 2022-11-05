@@ -1,5 +1,7 @@
 # Example:
 *.png
+*__debug_bin
+
 !tagalong/900-images/redshirt.png
 ## Core latex/pdflatex auxiliary files:
 *.aux

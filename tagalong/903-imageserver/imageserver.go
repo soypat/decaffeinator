@@ -20,9 +20,9 @@ const (
 )
 
 func main() {
-	fmt.Printf("start server at http://localhost%s\n", address)
 	is := ImageServer{}
 	http.Handle("/", is)
+	fmt.Printf("started server at http://localhost%s\n", address)
 	http.ListenAndServe(address, nil)
 }
 
