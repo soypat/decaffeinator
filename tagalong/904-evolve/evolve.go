@@ -40,7 +40,7 @@ func main() {
 	rand.Seed(seed)
 	is := NewImageServer("myimg.png")
 	http.Handle("/", is)
-	fmt.Printf("started generative server at http://localhost%s with seed %d\n", address, seed)
+	fmt.Printf("started evolution server at http://localhost%s with seed %d. Spam F5 to run evolution.\n", address, seed)
 	http.ListenAndServe(address, nil)
 }
 
