@@ -16,7 +16,7 @@ import (
 )
 
 type ImageServer struct {
-	sync.Mutex
+	lock       *sync.Mutex
 	agents     []Agent
 	background image.Image
 	imagePath  string
@@ -36,15 +36,16 @@ const (
 )
 
 func main() {
-	seed := time.Now().Unix() % 1000
+	seed := time.Now().Unix() % 1000 // Seed 471 is particularily nice.
 	rand.Seed(seed)
 	is := NewImageServer("myimg.png")
-	http.Handle("/", &is)
+	http.Handle("/", is)
 	fmt.Printf("started generative server at http://localhost%s with seed %d\n", address, seed)
 	http.ListenAndServe(address, nil)
 }
 
 func NewImageServer(imagePath string) (is ImageServer) {
+	is.lock = new(sync.Mutex)
 	is.imagePath = imagePath
 	is.background = image.NewUniform(color.White)
 	fp, err := os.Create(imagePath)
@@ -63,9 +64,9 @@ func randColor() color.Color {
 	return color.RGBA{R: uint8(rand.Intn(255)), G: uint8(rand.Intn(255)), B: uint8(rand.Intn(255)), A: 255}
 }
 
-func (is *ImageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	is.Lock()
-	defer is.Unlock()
+func (is ImageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	is.lock.Lock()
+	defer is.lock.Unlock()
 	const softening = 1.0 / imgSize // Softening parameter to avoid 0 distance singularities.
 	const G = imgSize / 500.0       // "Gravitational constant".
 	// First update agents.
