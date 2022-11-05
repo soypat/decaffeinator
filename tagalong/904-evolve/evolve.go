@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 )
 
 type ImageServer struct {
@@ -29,19 +30,17 @@ type Agent struct {
 
 const (
 	imgSize   = 500
-	numAgents = 10
-	// Gravitational constant.
-	G         = imgSize / 500
-	softening = 1e-4
+	numAgents = 3
 	agentSize = imgSize/256 + 1
-	squares   = 8 // This is an approximate parameter.
 	address   = ":8080"
 )
 
 func main() {
+	seed := time.Now().Unix() % 1000
+	rand.Seed(seed)
 	is := NewImageServer("myimg.png")
 	http.Handle("/", &is)
-	fmt.Printf("started generative server at http://localhost%s\n", address)
+	fmt.Printf("started generative server at http://localhost%s with seed %d\n", address, seed)
 	http.ListenAndServe(address, nil)
 }
 
@@ -67,6 +66,8 @@ func randColor() color.Color {
 func (is *ImageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	is.Lock()
 	defer is.Unlock()
+	const softening = 1.0 / imgSize // Softening parameter to avoid 0 distance singularities.
+	const G = imgSize / 500.0       // "Gravitational constant".
 	// First update agents.
 	for i, agent1 := range is.agents {
 		for j, agent2 := range is.agents[i+1:] {
@@ -76,16 +77,15 @@ func (is *ImageServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			accelx, accely := G*distancex/euclidean, G*distancey/euclidean
 			is.agents[i].velx += accelx
 			is.agents[i].vely += accely
-			is.agents[j].velx -= accelx
-			is.agents[j].vely -= accely
+			is.agents[i+j+1].velx -= accelx
+			is.agents[i+j+1].vely -= accely
 		}
 	}
 	for i, agent := range is.agents {
+		// Update agent positions with updated velocities.
 		is.agents[i].posx += int(agent.velx)
 		is.agents[i].posy += int(agent.vely)
-		fmt.Printf("agent%d pos:(%d,%d), vel:(%.g, %.g)\n", i, agent.posx, agent.posy, agent.velx, agent.vely)
 	}
-	fmt.Println()
 	// Next load previous image.
 	fp, err := os.Open(is.imagePath)
 	if err != nil {
