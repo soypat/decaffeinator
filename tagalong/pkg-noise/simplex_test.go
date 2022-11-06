@@ -46,3 +46,21 @@ func TestSimplex2D(t *testing.T) {
 		}
 	}
 }
+
+func TestSimplex1D(t *testing.T) {
+	const (
+		span           = 1000.0
+		start          = -500.0
+		stepsPerDim    = 1_000_000
+		totalSteps     = stepsPerDim * stepsPerDim
+		step           = float64(span) / stepsPerDim
+		permissibleMax = 1
+	)
+	for x := start; x < start+span; x += step {
+		n := Simplex1D(x)
+		ok := math.Abs(n) < permissibleMax
+		if !ok {
+			t.Error(x, n)
+		}
+	}
+}
