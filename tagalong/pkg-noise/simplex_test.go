@@ -26,3 +26,23 @@ func TestNoise3D(t *testing.T) {
 		}
 	}
 }
+
+func TestSimplex2D(t *testing.T) {
+	const (
+		span           = 100.0
+		start          = 0.0
+		stepsPerDim    = 1000
+		totalSteps     = stepsPerDim * stepsPerDim
+		step           = float64(span) / stepsPerDim
+		permissibleMax = 1
+	)
+	for x := start; x < start+span; x += step {
+		for y := start; y < start+span; y += step {
+			n := Simplex2D(x, y)
+			ok := math.Abs(n) < permissibleMax
+			if !ok {
+				t.Error(x, y, n)
+			}
+		}
+	}
+}

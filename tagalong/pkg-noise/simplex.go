@@ -9,13 +9,13 @@ type vec4 struct{ x, y, z, w float64 }
 // Returns a simplex noise sample at x, y, z.
 // Value returned tends to be in interval (-1,1) though a bug
 // is causing peaks of magnitude (-4.5,4.5) to appear randomly.
-// See [reference implementation].
-//
-// [reference implementation]: https://github.com/ashima/webgl-noise
 func Simplex3D(x, y, z float64) float64 {
 	return snoise3(vec3{x, y, z})
 }
 
+// See [reference implementation].
+//
+// [reference implementation]: https://github.com/ashima/webgl-noise
 func snoise3(v vec3) float64 {
 	// https://www.youtube.com/watch?v=lctXaT9pxA0&ab_channel=SebastianLague
 	const (
@@ -94,10 +94,10 @@ func snoise3(v vec3) float64 {
 
 // Simplex2D returns simplex noise on a 2D field.
 func Simplex2D(x, y float64) float64 {
-	// Has a bug.
-	return snoise2(vec2{x, y})
+	return simplext2D(x, y)
 }
 
+// Has a bug.
 func snoise2(v vec2) float64 {
 	// https://github.com/ashima/webgl-noise
 	const (

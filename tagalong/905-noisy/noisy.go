@@ -37,7 +37,8 @@ func (p Noisy) At(i, j int) color.Color {
 	x, y := float64(i)/imageSize, float64(j)/imageSize
 	x += p.offset
 	y += p.offset
-	n := math.Max(0, (noise.Simplex3D(x*span, y*span, 5)+maxNoise)/(maxNoise*2))
+	n := noise.Simplex2D(x*span, y*span)
+	n = math.Max(0, (n+maxNoise)/(maxNoise*2))
 	return color.RGBA{R: uint8(n * 255), A: 255}
 }
 
