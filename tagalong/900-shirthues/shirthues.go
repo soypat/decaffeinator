@@ -44,7 +44,6 @@ func main() {
 			return color.Black
 		},
 	}
-
 	// Write new image to disk.
 	err := png.Encode(newshirt, layer2)
 	if err != nil {
@@ -70,7 +69,7 @@ func (l overlay) At(x, y int) color.Color {
 }
 
 func newHue(turns float64) hue {
-	// http: //www.graficaobscura.com/matrix/index.html
+	// http://www.graficaobscura.com/matrix/index.html
 	const sqrt13 = 0.5773502691896257645091488 // sqrt(1/3)
 	h := hue{}
 	radians := 2 * math.Pi * turns

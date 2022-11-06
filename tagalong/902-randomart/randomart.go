@@ -1,14 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math/rand"
 	"os"
+	"time"
 )
 
 func main() {
+	seed := time.Now().Unix() % 1000
+	rand.Seed(seed)
+	fmt.Println("agentart.png from seed", seed)
 	art := NewRandomArt(500, 500, 160)
 	fp, _ := os.Create("agentart.png")
 	err := png.Encode(fp, art)
