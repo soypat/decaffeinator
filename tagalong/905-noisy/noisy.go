@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -31,10 +32,12 @@ type Noisy struct {
 }
 
 func (p Noisy) At(i, j int) color.Color {
+	const maxNoise = 1
+	const span = 100
 	x, y := float64(i)/imageSize, float64(j)/imageSize
 	x += p.offset
 	y += p.offset
-	n := noise.Simplex3D(x*3, y*3, 5) * 20
+	n := math.Max(0, (noise.Simplex3D(x*span, y*span, 5)+maxNoise)/(maxNoise*2))
 	return color.RGBA{R: uint8(n * 255), A: 255}
 }
 

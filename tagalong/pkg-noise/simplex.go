@@ -7,13 +7,20 @@ type vec3 struct{ x, y, z float64 }
 type vec4 struct{ x, y, z, w float64 }
 
 // Returns a simplex noise sample at x, y, z.
+// Value returned tends to be in interval (-1,1) though a bug
+// is causing peaks of magnitude (-4.5,4.5) to appear randomly.
+// See [reference implementation].
+//
+// [reference implementation]: https://github.com/ashima/webgl-noise
 func Simplex3D(x, y, z float64) float64 {
 	return snoise3(vec3{x, y, z})
 }
 
 func snoise3(v vec3) float64 {
 	// https://www.youtube.com/watch?v=lctXaT9pxA0&ab_channel=SebastianLague
-	const Cx, Cy = 1.0 / 6.0, 1.0 / 3.0
+	const (
+		Cx, Cy = 1.0 / 6.0, 1.0 / 3.0
+	)
 	i := floor3(addScalar3(dot3(v, elem3(Cy)), v))
 	x0 := addScalar3(dot3(i, elem3(Cx)), sub3(v, i))
 
@@ -29,20 +36,31 @@ func snoise3(v vec3) float64 {
 
 	// Permutations
 	i = mod289_3(i)
-	p := permute4(addScalar4(i.z, vec4{y: i1.z, z: i2.z, w: 1}))
+	p := permute4(addScalar4(i.z, vec4{y: i1.z, z: i2.z, w: 1.0}))
 	p = add4(p, permute4(addScalar4(i.y, vec4{y: i1.y, z: i2.y, w: 1.0})))
 	p = add4(p, permute4(addScalar4(i.x, vec4{y: i1.x, z: i2.x, w: 1.0})))
 
 	// Gradients: 7x7 points over square, mapped onto octahedron. The ring size 17x17 = 289 is close to multiple of 49 (49*6 = 294) ????
-	j := sub4(p, scale4(49, floor4(scale4(1./49, p)))) // mod(p,7*7)
-	x_ := floor4(scale4(1./7., j))
-	y_ := floor4(sub4(j, scale4(7, x_))) // mod(j, n)
-	x := addScalar4(0.5, scale4(2, x_))
-	x = addScalar4(-1, scale4(1./7.0, x))
-	y := addScalar4(0.5, scale4(2, y_))
-	y = addScalar4(-1, scale4(1./7.0, y))
+	const (
+		Dx, Dy, Dz, Dw = 0.0, 0.5, 1.0, 2.0
+		d7             = 1.0 / 7.0
+		// Why does the source do this? It is a mystery to me.
+		nsx, nsy, nsz = d7*Dw - Dx, d7*Dy - Dz, d7*Dz - Dx
+	)
+	j := sub4(p, scale4(49, floor4(scale4(nsz*nsz, p)))) // mod(p,7*7)
 
-	h := addScalar4(1, sub4(scale4(-1, abs4(x)), abs4(y)))
+	x_ := floor4(scale4(nsz, j))
+	y_ := floor4(sub4(j, scale4(7, x_))) // mod(j, n)
+
+	x := addScalar4(nsy, scale4(nsx, x_))
+	y := addScalar4(nsy, scale4(nsx, y_))
+	h := sub4(scale4(-1, abs4(x)), abs4(y))
+	h = addScalar4(1, h)
+	// x := addScalar4(0.5, scale4(2, x_))
+	// x = addScalar4(-1, scale4(d7, x))
+	// y := addScalar4(0.5, scale4(2, y_))
+	// y = addScalar4(-1, scale4(d7, y))
+	// h := addScalar4(1, sub4(scale4(-1, abs4(x)), abs4(y)))
 
 	b0 := vec4{x.x, x.y, y.x, y.y}
 	b1 := vec4{x.z, x.w, y.z, y.w}
@@ -67,11 +85,11 @@ func snoise3(v vec3) float64 {
 	g3 = scale3(norm.w, g3)
 
 	// Mix final noise value.
-	m := max4(elem4(0), vec4{0.6 - dot3(x0, x0), 0.6 - dot3(x1, x1), 0.6 - dot3(x2, x2), 0.6 - dot3(x3, x3)})
+	m := max4(elem4(0), vec4{0.5 - dot3(x0, x0), 0.5 - dot3(x1, x1), 0.5 - dot3(x2, x2), 0.5 - dot3(x3, x3)})
 	m = mul4(m, m)
 	m = mul4(m, m)
 	px := vec4{dot3(x0, g0), dot3(x1, g1), dot3(x2, g2), dot3(x3, g3)}
-	return 42.0 * dot4(m, px)
+	return 105.0 * dot4(m, px)
 }
 
 // Simplex2D returns simplex noise on a 2D field.
@@ -175,6 +193,12 @@ func taylorInvSqrt(r vec4) vec4 {
 	}
 }
 
+func mod4(a, b vec4) vec4 {
+	return vec4{math.Mod(a.x, b.x), math.Mod(a.y, b.y), math.Mod(a.z, b.z), math.Mod(a.w, b.w)}
+}
+func abs4(v vec4) vec4 {
+	return vec4{math.Abs(v.x), math.Abs(v.y), math.Abs(v.z), math.Abs(v.w)}
+}
 func abs3(a vec3) vec3    { return vec3{math.Abs(a.x), math.Abs(a.y), math.Abs(a.z)} }
 func max3(a, b vec3) vec3 { return vec3{math.Max(a.x, b.x), math.Max(a.y, b.y), math.Max(a.z, b.z)} }
 func min3(a, b vec3) vec3 { return vec3{math.Min(a.x, b.x), math.Min(a.y, b.y), math.Min(a.z, b.z)} }
@@ -192,9 +216,6 @@ func mul4(a, b vec4) vec4 { return vec4{a.x * b.x, a.y * b.y, a.z * b.z, a.w * b
 // hadamard product.
 func mul3(a, b vec3) vec3 { return vec3{a.x * b.x, a.y * b.y, a.z * b.z} }
 
-func abs4(v vec4) vec4 {
-	return vec4{math.Abs(v.x), math.Abs(v.y), math.Abs(v.z), math.Abs(v.w)}
-}
 func add3(a, b vec3) vec3     { return vec3{a.x + b.x, a.y + b.y, a.z + b.z} }
 func dot3(a, b vec3) float64  { return a.x*b.x + a.y*b.y + a.z*b.z }
 func dot4(a, b vec4) float64  { return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w }
