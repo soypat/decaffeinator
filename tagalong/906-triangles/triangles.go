@@ -36,8 +36,8 @@ func (s SDFDrawing) At(i, j int) color.Color {
 	v := vec2{x: float64(i), y: float64(j)}
 	for i := range s.sdfs {
 		if value := s.sdfs[i](v); value < 0 {
-			g := uint8(i % 3)
-			b := (g + 1) % 3
+			g := uint8(i) % 3
+			b := uint8(i) % 4
 			return color.RGBA{R: uint8(0xff + int(value)), G: g * 64, B: b * 64, A: 0xff}
 		}
 	}
