@@ -3,6 +3,7 @@ package noise
 // Simplex1D is a basic implementation of Ken Perlin's
 // Simplex noise algorithm, which is an improvement on his original's
 // classical noise algorithm known as classic or Perlin noise.
+// The returned value is in the range (-1,1).
 func Simplex1D(x float64) float64 {
 	// https://github.com/devdad/SimplexNoise/blob/master/Source/SimplexNoise/Private/SimplexNoiseBPLibrary.cpp
 	i0 := fastfloor(x)
@@ -25,6 +26,7 @@ func Simplex1D(x float64) float64 {
 }
 
 // Simplex2D returns simplex noise on a 2D field.
+// The returned value is in the range (-1,1).
 func Simplex2D(x, y float64) float64 {
 	return simplext2D(x, y)
 }
@@ -122,6 +124,12 @@ func fastfloor(x float64) int {
 	}
 	return int(x) - 1
 }
+
+// func init() {
+// 	for i := range perm {
+// 		perm[i] = uint8(i) // Shenanigans.
+// 	}
+// }
 
 var perm = [512]uint8{151, 160, 137, 91, 90, 15,
 	131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
