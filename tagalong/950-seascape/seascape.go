@@ -29,20 +29,20 @@ var (
 	seaWaterColor    = scale3(0.6, vec3{0.8, 0.9, 0.6})
 	seaWaterColorP12 = scale3(0.12, seaWaterColor)
 	light            = unit3(vec3{0.0, 1.0, 0.8})
-	octave           = mat2{1.6, -1.2, 1.2, 1.6} // Row major differnece?
+	octave           = mat2{1.6, -1.2, 1.2, 1.6} // Row major difference?
 )
 
 func main() {
 	const colorMul = 255
-	time := rand.Float64()
-	_ = time
+	time := 1 + rand.Float64()*seaSpeed
 	img := image.NewRGBA(image.Rect(0, 0, imageSize, imageSize))
 	for x := 0.0; x < imageSize; x++ {
 		for y := 0.0; y < imageSize; y++ {
 			uv := vec2{x, y}
 			col := getPixel(uv, time)
-			// col := vec3{seaOctave(uv, 4), seaOctave(uv, 4), seaOctave(uv, 4)}
-			img.SetRGBA(int(x), int(y), color.RGBA{
+			col = pow3(col, 0.65) // Color post process.
+			// For some reason image is inverted. We subtract here to turn it around.
+			img.SetRGBA(imageSize-int(x+1), imageSize-int(y+1), color.RGBA{
 				R: uint8(col.x * colorMul),
 				G: uint8(col.y * colorMul),
 				B: uint8(col.z * colorMul),
@@ -54,61 +54,25 @@ func main() {
 	png.Encode(fp, img)
 }
 
-// lighting
-func diffuse(n, l vec3, p float64) float64 { return math.Pow(dot3(n, l)*0.4+0.6, p) }
-func specular(n, l, e vec3, s float64) float64 {
-	nrm := (s + 8.0) / (math.Pi * 8)
-	dot := dot3(reflect3(e, n), l)
-	result := math.Pow(math.Max(0, dot), s) * nrm
-	return result
-}
-func skyColor(e vec3) vec3 {
-	e.y = (math.Max(e.y, 0)*0.8 + 0.2) * 0.8
-	oneMinusEy := 1 - e.y
-	return vec3{oneMinusEy * oneMinusEy, oneMinusEy, 0.6 + oneMinusEy*0.4}
-}
+func getPixel(coord vec2, t float64) vec3 {
+	uv := scale2(2.0/imageSize, coord)
+	uv = addScalar2(-1, uv)
+	// ray
+	// ang := vec3{math.Sin(3*t) * 0.1, math.Sin(t)*0.2 + 0.3, t}
+	ori := vec3{0, 3.5, t * 5}
+	dir := unit3(vec3{uv.x, uv.y, -2})
+	dir.z += 0.14 * math.Hypot(uv.x, uv.y)
+	dir = unit3(dir)
 
-func seaOctave(uv vec2, choppy float64) float64 {
-	uv = addScalar2(noise2d(uv), uv)
-	suv, cuv := sincos2(uv)
-	wv := sub2(elem2(1), abs2(suv))
-	swv := abs2(cuv)
-	wv = mix2(wv, swv, wv)
-	return math.Pow(1-math.Pow(wv.x*wv.y, 0.65), choppy)
-}
-
-func seaMap(detail int, p vec3, t float64) float64 {
-	freq := seaFreq
-	amp := seaHeight
-	choppy := seaChoppy
-	uv := vec2{p.x, p.z}
-	uv.x *= 0.75
-	var d, h float64
-	for i := 0; i < detail; i++ {
-		d = seaOctave(scale2(freq, addScalar2(t, uv)), choppy)
-		d += seaOctave(scale2(freq, addScalar2(-t, uv)), choppy)
-		h += d * amp
-		uv = octave.mulvec(uv)
-		freq *= 1.9
-		amp *= 0.22
-		choppy = mix(choppy, 1.0, 0.2)
-	}
-	return p.y - h
-}
-
-func seaColor(p, n, l, eye, dist vec3) vec3 {
-	fresnel := uclamp(1 - dot3(n, scale3(-1, eye)))
-	fresnel = fresnel * fresnel * fresnel * 0.5
-
-	reflected := skyColor(reflect3(eye, n))
-	diff := diffuse(n, l, 80.0)
-	refracted := add3(seaBase, scale3(diff, seaWaterColorP12))
-
-	color := mix3(refracted, reflected, elem3(fresnel))
-	atten := math.Max(0.0, 1-0.001*dot3(dist, dist))
-
-	color = add3(color, scale3(atten*0.18*(p.y-seaHeight), seaWaterColor))
-	color = add3(color, elem3(specular(n, l, eye, 60.0)))
+	// Height map tracing.
+	p, _ := heightMapTracing(ori, dir, t)
+	dist := sub3(p, ori)
+	n := seaNormal(p, epsNorm*dot3(dist, dist), t)
+	color := mix3(
+		skyColor(dir),
+		seaColor(p, n, light, dir, dist),
+		elem3(math.Pow(smoothstep(0, -0.02, dir.y), 0.2)),
+	)
 	return color
 }
 
@@ -137,7 +101,57 @@ func heightMapTracing(ori, dir vec3, t float64) (p vec3, tmid float64) {
 	return p, tmid
 }
 
-func getNormal(p vec3, eps, t float64) (n vec3) {
+func seaMap(detail int, p vec3, t float64) float64 {
+	freq := seaFreq
+	amp := seaHeight
+	choppy := seaChoppy
+	uv := vec2{p.x, p.z}
+	uv.x *= 0.75
+	var d, h float64
+	for i := 0; i < detail; i++ {
+		d = seaOctave(scale2(freq, addScalar2(t, uv)), choppy)
+		d += seaOctave(scale2(freq, addScalar2(-t, uv)), choppy)
+		h += d * amp
+		uv = octave.mulvec(uv)
+		freq *= 1.9
+		amp *= 0.22
+		choppy = mix(choppy, 1.0, 0.2)
+	}
+	return p.y - h
+}
+
+func seaOctave(uv vec2, choppy float64) float64 {
+	uv = addScalar2(noise2d(uv), uv)
+	suv, cuv := sincos2(uv)
+	wv := sub2(elem2(1), abs2(suv))
+	swv := abs2(cuv)
+	wv = mix2(wv, swv, wv)
+	return math.Pow(1-math.Pow(wv.x*wv.y, 0.65), choppy)
+}
+
+func skyColor(e vec3) vec3 {
+	e.y = 0.8 * (math.Max(e.y, 0)*0.8 + 0.2)
+	oneMinusEy := 1 - e.y
+	return vec3{oneMinusEy * oneMinusEy, oneMinusEy, 0.6 + oneMinusEy*0.4}
+}
+
+func seaColor(p, n, light, eye, dist vec3) vec3 {
+	fresnel := uclamp(1 - dot3(n, scale3(-1, eye)))
+	fresnel = fresnel * fresnel * fresnel * 0.5
+
+	reflected := skyColor(reflect3(eye, n))
+	diff := diffuse(n, light, 80.0)
+	refracted := add3(seaBase, scale3(diff, seaWaterColorP12))
+
+	color := mix3(refracted, reflected, elem3(fresnel))
+	atten := math.Max(0.0, 1-0.001*dot3(dist, dist))
+
+	color = add3(color, scale3(atten*0.18*(p.y-seaHeight), seaWaterColor))
+	color = add3(color, elem3(specular(n, light, eye, 60.0)))
+	return color
+}
+
+func seaNormal(p vec3, eps, t float64) (n vec3) {
 	n.y = seaMap(iterFragDetailed, p, t)
 	n.x = seaMap(iterFragDetailed, vec3{p.x + eps, p.y, p.z}, t) - n.y
 	n.z = seaMap(iterFragDetailed, vec3{p.x, p.y, p.z + eps}, t) - n.y
@@ -145,24 +159,13 @@ func getNormal(p vec3, eps, t float64) (n vec3) {
 	return unit3(n)
 }
 
-func getPixel(coord vec2, t float64) vec3 {
-	uv := scale2(2.0/imageSize, coord)
-	uv = addScalar2(-1, uv)
-	// ray
-	// ang := vec3{math.Sin(3*t) * 0.1, math.Sin(t)*0.2 + 0.3, t}
-	ori := vec3{0, 3.5, t * 5}
-	dir := unit3(vec3{uv.x, uv.y, -2 + 0.14*math.Hypot(uv.x, uv.y)})
-	dir = unit3(dir)
-	// dir := dirGeneral //vec3{0.7, 0, 0}
-	// Height map tracing.
-	p, _ := heightMapTracing(ori, dir, t)
-	dist := sub3(p, ori)
-	n := scale3(epsNorm, getNormal(p, dot3(dist, dist), t))
-	return mix3(
-		skyColor(dir),
-		seaColor(p, n, light, dir, dist),
-		elem3(math.Pow(smoothstep(0, -0.02, dir.y), 0.2)),
-	)
+// lighting
+func diffuse(n, light vec3, p float64) float64 { return math.Pow(dot3(n, light)*0.4+0.6, p) }
+func specular(n, light, eye vec3, s float64) float64 {
+	nrm := (s + 8.0) / (math.Pi * 8)
+	dot := dot3(reflect3(eye, n), light)
+	result := math.Pow(math.Max(0, dot), s) * nrm
+	return result
 }
 
 // //////////
