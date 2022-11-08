@@ -35,11 +35,13 @@ var (
 func main() {
 	const colorMul = 255
 	time := rand.Float64()
+	_ = time
 	img := image.NewRGBA(image.Rect(0, 0, imageSize, imageSize))
 	for x := 0.0; x < imageSize; x++ {
 		for y := 0.0; y < imageSize; y++ {
 			uv := vec2{x, y}
 			col := getPixel(uv, time)
+			// col := vec3{seaOctave(uv, 4), seaOctave(uv, 4), seaOctave(uv, 4)}
 			img.SetRGBA(int(x), int(y), color.RGBA{
 				R: uint8(col.x * colorMul),
 				G: uint8(col.y * colorMul),
@@ -56,17 +58,16 @@ func main() {
 func diffuse(n, l vec3, p float64) float64 { return math.Pow(dot3(n, l)*0.4+0.6, p) }
 func specular(n, l, e vec3, s float64) float64 {
 	nrm := (s + 8.0) / (math.Pi * 8)
-	return math.Pow(math.Max(0, dot3(reflect3(e, n), l)), s) * nrm
+	dot := dot3(reflect3(e, n), l)
+	result := math.Pow(math.Max(0, dot), s) * nrm
+	return result
 }
 func skyColor(e vec3) vec3 {
 	e.y = (math.Max(e.y, 0)*0.8 + 0.2) * 0.8
-	eym1 := e.y - 1
-	return vec3{eym1 * eym1, eym1, 0.6 + (1.0-e.y)*0.4}
+	oneMinusEy := 1 - e.y
+	return vec3{oneMinusEy * oneMinusEy, oneMinusEy, 0.6 + oneMinusEy*0.4}
 }
 
-//	func skyColor() color.Color {
-//		return color.RGBA{B: 0xff, G: 40, R: 40, A: 0xff}
-//	}
 func seaOctave(uv vec2, choppy float64) float64 {
 	uv = addScalar2(noise2d(uv), uv)
 	suv, cuv := sincos2(uv)
@@ -80,7 +81,7 @@ func seaMap(detail int, p vec3, t float64) float64 {
 	freq := seaFreq
 	amp := seaHeight
 	choppy := seaChoppy
-	uv := vec2{p.x, p.y}
+	uv := vec2{p.x, p.z}
 	uv.x *= 0.75
 	var d, h float64
 	for i := 0; i < detail; i++ {
@@ -101,15 +102,16 @@ func seaColor(p, n, l, eye, dist vec3) vec3 {
 
 	reflected := skyColor(reflect3(eye, n))
 	diff := diffuse(n, l, 80.0)
-	refracted := add3(seaBase, addScalar3(diff, seaWaterColorP12))
+	refracted := add3(seaBase, scale3(diff, seaWaterColorP12))
 
 	color := mix3(refracted, reflected, elem3(fresnel))
-	atten := math.Max(0.0, 1-dot3(dist, dist)*0.001)
+	atten := math.Max(0.0, 1-0.001*dot3(dist, dist))
 
 	color = add3(color, scale3(atten*0.18*(p.y-seaHeight), seaWaterColor))
 	color = add3(color, elem3(specular(n, l, eye, 60.0)))
 	return color
 }
+
 func heightMapTracing(ori, dir vec3, t float64) (p vec3, tmid float64) {
 	tm := 0.0
 	tx := 1000.0
