@@ -16,7 +16,7 @@
 *.cb
 *.cb2
 .*.lb
-
+*.glsl
 ## Intermediate documents:
 *.dvi
 *.xdv

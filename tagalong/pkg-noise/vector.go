@@ -6,6 +6,15 @@ type vec2 struct{ x, y float64 }
 type vec3 struct{ x, y, z float64 }
 type vec4 struct{ x, y, z, w float64 }
 
+func Basic2D(x, y float64) float64 {
+	i, f := modf2(vec2{x, y})
+	u := mul2(f, mul2(f, sub2(elem2(3), scale2(2, f))))
+	n2 := hash2(add2(i, vec2{1, 1}))
+	n1 := mix(hash2(i), hash2(add2(i, vec2{1, 0})), u.x)
+	n2 = mix(hash2(add2(i, vec2{0, 1})), n2, u.x)
+	return -1 + 2*mix(n1, n2, u.y)
+}
+
 // Simplex noise implementation. Has a bug.
 // [reference implementation]: https://github.com/ashima/webgl-noise
 func snoise2(v vec2) float64 {
@@ -250,3 +259,15 @@ func scale2(f float64, v vec2) vec2     { return vec2{v.x * f, v.y * f} }
 func addScalar2(f float64, v vec2) vec2 { return vec2{v.x + f, v.y + f} }
 func dot2(a, b vec2) float64            { return a.x*b.x + a.y*b.y }
 func elem2(x float64) vec2              { return vec2{x, x} }
+func mix(x, y, a float64) float64       { return x*(1-a) + y*a }
+
+func hash2(p vec2) float64 {
+	h := dot2(p, vec2{127.1, 311.7})
+	_, frac := math.Modf(math.Sin(h) * 43758.5453123)
+	return frac
+}
+func modf2(p vec2) (int, frac vec2) {
+	intx, fracx := math.Modf(p.x)
+	inty, fracy := math.Modf(p.y)
+	return vec2{intx, inty}, vec2{fracx, fracy}
+}
