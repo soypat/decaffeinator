@@ -1,4 +1,5 @@
 // Directly inspired by Seascape by TDM https://www.shadertoy.com/view/Ms2SD1
+// At full HD settings it takes around a minute to run on a modern system.
 package main
 
 import (
@@ -11,10 +12,11 @@ import (
 )
 
 const (
-	imageSize        = 1000
+	imageWidth       = 1920
+	imageHeight      = 1080
 	Numsteps         = 8
 	eps              = 1e-3
-	epsNorm          = 0.1 / imageSize
+	epsNorm          = 0.1 / imageWidth
 	iterGeom         = 3
 	iterFragDetailed = 5
 
@@ -36,14 +38,14 @@ func main() {
 	const colorMul = 255
 	time := 1 + rand.Float64()*seaSpeed
 
-	img := image.NewRGBA(image.Rect(0, 0, imageSize, imageSize))
-	for x := 0.0; x < imageSize; x++ {
-		for y := 0.0; y < imageSize; y++ {
+	img := image.NewRGBA(image.Rect(0, 0, imageWidth, imageHeight))
+	for x := 0.0; x < imageWidth; x++ {
+		for y := 0.0; y < imageHeight; y++ {
 			uv := vec2{x, y}
 			col := getPixel(uv, time)
 			col = pow3(col, 0.65) // Color post process.
 			// For some reason image is inverted. We subtract here to turn it around.
-			img.SetRGBA(imageSize-int(x+1), imageSize-int(y+1), color.RGBA{
+			img.SetRGBA(imageWidth-int(x+1), imageHeight-int(y+1), color.RGBA{
 				R: uint8(col.x * colorMul),
 				G: uint8(col.y * colorMul),
 				B: uint8(col.z * colorMul),
@@ -56,8 +58,10 @@ func main() {
 }
 
 func getPixel(coord vec2, t float64) vec3 {
-	uv := scale2(2.0/imageSize, coord)
-	uv = addScalar2(-1, uv)
+	coord.x *= 2.0 / imageWidth
+	coord.y *= 2.0 / imageHeight
+	uv := addScalar2(-1, coord)
+	uv.x *= imageWidth / imageHeight
 	// ray
 	// ang := vec3{math.Sin(3*t) * 0.1, math.Sin(t)*0.2 + 0.3, t}
 	ori := vec3{0, 3.5, t * 5}

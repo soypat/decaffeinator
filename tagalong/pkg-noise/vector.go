@@ -7,6 +7,7 @@ type vec3 struct{ x, y, z float64 }
 type vec4 struct{ x, y, z, w float64 }
 
 func Basic2D(x, y float64) float64 {
+	// Original implementation by Alexander Alekseev aka TDM - 2014. https://www.shadertoy.com/view/Ms2SD1
 	i, f := modf2(vec2{x, y})
 	u := mul2(f, mul2(f, sub2(elem2(3), scale2(2, f))))
 	n2 := hash2(add2(i, vec2{1, 1}))
@@ -263,11 +264,13 @@ func mix(x, y, a float64) float64       { return x*(1-a) + y*a }
 
 func hash2(p vec2) float64 {
 	h := dot2(p, vec2{127.1, 311.7})
-	_, frac := math.Modf(math.Sin(h) * 43758.5453123)
+	frac := frac(math.Sin(h) * 43758.5453123)
 	return frac
 }
-func modf2(p vec2) (int, frac vec2) {
-	intx, fracx := math.Modf(p.x)
-	inty, fracy := math.Modf(p.y)
-	return vec2{intx, inty}, vec2{fracx, fracy}
+func frac(x float64) float64 { return x - math.Floor(x) }
+func frac2(a vec2) vec2      { return vec2{frac(a.x), frac(a.y)} }
+func frac3(a vec3) vec3      { return vec3{frac(a.x), frac(a.y), frac(a.z)} }
+func modf2(p vec2) (i, f vec2) {
+	fx, fy := frac(p.x), frac(p.y)
+	return vec2{p.x - fx, p.y - fy}, vec2{fx, fy}
 }
