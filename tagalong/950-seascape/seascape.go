@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	imageSize        = 300
+	imageSize        = 1000
 	Numsteps         = 8
 	eps              = 1e-3
 	epsNorm          = 0.1 / imageSize
@@ -35,6 +35,7 @@ var (
 func main() {
 	const colorMul = 255
 	time := 1 + rand.Float64()*seaSpeed
+
 	img := image.NewRGBA(image.Rect(0, 0, imageSize, imageSize))
 	for x := 0.0; x < imageSize; x++ {
 		for y := 0.0; y < imageSize; y++ {
@@ -85,7 +86,7 @@ func heightMapTracing(ori, dir vec3, t float64) (p vec3, tmid float64) {
 		p = add3(ori, scale3(tx, dir))
 		return p, tx
 	}
-	hm := seaMap(iterGeom, add3(ori, scale3(tm, dir)), t)
+	hm := seaMap(iterGeom, ori, t) // Original implementation adds needlessly to ori.
 	for i := 0; i < Numsteps; i++ {
 		tmid = mix(tm, tx, hm/(hm-hx))
 		p = add3(ori, scale3(tmid, dir))
@@ -142,12 +143,13 @@ func seaColor(p, n, light, eye, dist vec3) vec3 {
 	reflected := skyColor(reflect3(eye, n))
 	diff := diffuse(n, light, 80.0)
 	refracted := add3(seaBase, scale3(diff, seaWaterColorP12))
+	specular := elem3(specular(n, light, eye, 60.0))
 
 	color := mix3(refracted, reflected, elem3(fresnel))
 	atten := math.Max(0.0, 1-0.001*dot3(dist, dist))
 
 	color = add3(color, scale3(atten*0.18*(p.y-seaHeight), seaWaterColor))
-	color = add3(color, elem3(specular(n, light, eye, 60.0)))
+	color = add3(color, specular)
 	return color
 }
 
@@ -253,17 +255,7 @@ func sincos2(v vec2) (sin, cos vec2) {
 	sy, cy := math.Sincos(v.y)
 	return vec2{sx, sy}, vec2{cx, cy}
 }
-func frac2(p vec2) vec2 {
-	_, fracx := math.Modf(p.x)
-	_, fracy := math.Modf(p.y)
-	return vec2{fracx, fracy}
-}
 func reflect3(I, N vec3) vec3 { return sub3(I, scale3(2*dot3(N, I), N)) }
-func modf2(p vec2) (int, frac vec2) {
-	intx, fracx := math.Modf(p.x)
-	inty, fracy := math.Modf(p.y)
-	return vec2{intx, inty}, vec2{fracx, fracy}
-}
 
 func mix(x, y, a float64) float64 { return x*(1-a) + y*a }
 func mix2(x, y, a vec2) vec2      { return vec2{mix(x.x, y.x, a.x), mix(x.y, y.y, a.y)} }
@@ -272,6 +264,13 @@ func uclamp(x float64) float64    { return math.Max(0, math.Min(1, x)) }
 func smoothstep(edge0, edge1, x float64) float64 {
 	t := uclamp((x - edge0) / (edge1 - edge0))
 	return t * t * (3 - 2*t)
+}
+func frac(x float64) float64 { return x - math.Floor(x) }
+func frac2(a vec2) vec2      { return vec2{frac(a.x), frac(a.y)} }
+func frac3(a vec3) vec3      { return vec3{frac(a.x), frac(a.y), frac(a.z)} }
+func modf2(p vec2) (i, f vec2) {
+	fx, fy := frac(p.x), frac(p.y)
+	return vec2{p.x - fx, p.y - fy}, vec2{fx, fy}
 }
 
 // Row major matrices
@@ -295,7 +294,9 @@ func (m *mat2) mulvec(v vec2) vec2 {
 }
 func hash(p vec2) float64 {
 	h := dot2(p, vec2{127.1, 311.7})
-	_, frac := math.Modf(math.Sin(h) * 43758.5453123)
+	x := math.Sin(h) * 43758.5453123
+	// frac := x - math.Floor(x)
+	_, frac := math.Modf(x)
 	return frac
 }
 
