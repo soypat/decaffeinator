@@ -25,6 +25,9 @@ func main() {
 	defer withZig.Close()
 	const codeLevel = "###"
 	for _, vig := range vignettes {
+		if vig.MD == "" {
+			continue
+		}
 		fmt.Fprintf(withZig, "%s\n", vig.MD)
 		fmt.Fprintf(tagalong, "%s\n", vig.MD)
 		if vig.Go == "" || vig.Python == "" {

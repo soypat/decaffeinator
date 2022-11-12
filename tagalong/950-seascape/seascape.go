@@ -3,12 +3,14 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math"
 	"math/rand"
 	"os"
+	"time"
 )
 
 const (
@@ -35,12 +37,15 @@ var (
 )
 
 func main() {
-	const colorMul = 255
+	seed := time.Now().Unix() % 1000
+	rand.Seed(seed)
 	time := 1 + rand.Float64()*seaSpeed
 
+	fmt.Println("creating seascape.png with seed", seed)
 	img := image.NewRGBA(image.Rect(0, 0, imageWidth, imageHeight))
 	for x := 0.0; x < imageWidth; x++ {
 		for y := 0.0; y < imageHeight; y++ {
+			const colorMul = 255
 			uv := vec2{x, y}
 			col := getPixel(uv, time)
 			col = pow3(col, 0.65) // Color post process.
