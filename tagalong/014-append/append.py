@@ -10,3 +10,6 @@ print(s)
 # Python does not allow adding more than one item at a time.
 s.extend([2, 3, 4])
 print(s)
+
+s.extend([5, 6, 7])
+print(s)

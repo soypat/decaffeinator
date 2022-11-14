@@ -16,4 +16,7 @@ func main() {
 
 	v1.X = 1e9
 	fmt.Println("new v1:", v1)
+
+	// You may also print the struct with it's fields with the +v formatting directive.
+	fmt.Printf("%+v", v1)
 }

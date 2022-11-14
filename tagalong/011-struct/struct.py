@@ -21,3 +21,4 @@ print(v1.x)
 # https://go.dev/tour/moretypes/4
 v1.x = 1e9
 print(v1)
+

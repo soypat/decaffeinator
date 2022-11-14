@@ -6,9 +6,12 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
+	"sync"
 )
 
 func main() {
@@ -16,6 +19,31 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	tmpdir, err := os.MkdirTemp("", "decaf")
+	if err != nil && !os.IsExist(err) {
+		log.Fatal(err)
+	}
+	// We first generate the output of the Vignettes concurrently.
+	outputs := make([]string, len(vignettes))
+	var wg sync.WaitGroup
+	for i, vignette := range vignettes {
+		if vignette.Go == "" || vignette.MD == "" {
+			continue
+		}
+		wg.Add(1)
+		i := i
+		vignette := vignette
+		go func() {
+			outputs[i], err = vignette.ExecuteGo(tmpdir)
+			if err != nil {
+				log.Println("processing vignette", vignette.Name, err)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	// Generate markdown files.
 	withZig, err := os.Create("tagalong_w_zig.md")
 	if err != nil {
 		log.Fatal(err)
@@ -24,7 +52,7 @@ func main() {
 	tagalongCodeOnly, _ := os.Create("tagalongCode.md")
 	defer withZig.Close()
 	const codeLevel = "###"
-	for _, vig := range vignettes {
+	for i, vig := range vignettes {
 		if vig.MD == "" {
 			continue
 		}
@@ -33,15 +61,20 @@ func main() {
 		if vig.Go == "" || vig.Python == "" {
 			continue
 		}
+		output := strings.TrimSuffix(outputs[i], "\n")
+
 		fmt.Fprintf(withZig, codeLevel+" Python (%s)\n```python\n%s\n```\n", vig.Name, vig.Python)
 		fmt.Fprintf(withZig, codeLevel+" Go (%s)\n```go\n%s\n```\n", vig.Name, vig.Go)
+		fmt.Fprintf(withZig, "**Output**:\n```plaintext\n%s\n```\n\n", output)
 
 		fmt.Fprintf(tagalong, codeLevel+" Python (%s)\n```python\n%s\n```\n", vig.Name, vig.Python)
 		fmt.Fprintf(tagalong, codeLevel+" Go (%s)\n```go\n%s\n```\n", vig.Name, vig.Go)
+		fmt.Fprintf(tagalong, "**Output**:\n```plaintext\n%s\n```\n\n", output)
 
 		fmt.Fprintf(tagalongCodeOnly, "\n# %s\n", vig.Name)
 		fmt.Fprintf(tagalongCodeOnly, codeLevel+" Python (%s)\n```python\n%s\n```\n", vig.Name, vig.Python)
 		fmt.Fprintf(tagalongCodeOnly, codeLevel+" Go (%s)\n```go\n%s\n```\n", vig.Name, vig.Go)
+		fmt.Fprintf(tagalongCodeOnly, "**Output**:\n```plaintext\n%s\n```\n\n", output)
 		if vig.Zig != "" {
 			fmt.Fprintf(withZig, codeLevel+" Zig (%s)\n```zig\n%s\n```\n", vig.Name, vig.Zig)
 		}
@@ -59,6 +92,22 @@ type Vignette struct {
 	Go     string
 	Python string
 	Zig    string
+}
+
+func (v *Vignette) ExecuteGo(dir string) (string, error) {
+	tmpFilename := filepath.Join(dir, v.Name+".go")
+	fp, err := os.Create(tmpFilename)
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpFilename)
+	_, err = fp.WriteString(v.Go)
+	if err != nil {
+		return "", err
+	}
+	fp.Close()
+	out, err := exec.Command("go", "run", tmpFilename).CombinedOutput()
+	return string(out), err
 }
 
 func ParseDirExercises(dir string) ([]Vignette, error) {
@@ -88,14 +137,14 @@ func ParseDirExercises(dir string) ([]Vignette, error) {
 			if err != nil {
 				return nil, err
 			}
-			switch {
-			case filename == "README.md":
+			switch filename {
+			case "README.md":
 				vignettes[i].MD = string(b)
-			case filename == vignettes[i].Name+".zig":
+			case vignettes[i].Name + ".zig":
 				vignettes[i].Zig = string(b)
-			case filename == vignettes[i].Name+".go":
+			case vignettes[i].Name + ".go":
 				vignettes[i].Go = string(b)
-			case filename == vignettes[i].Name+".py":
+			case vignettes[i].Name + ".py":
 				vignettes[i].Python = string(b)
 			}
 		}

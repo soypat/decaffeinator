@@ -17,4 +17,9 @@ func main() {
 	// We can add more than one element at a time.
 	s = append(s, 2, 3, 4)
 	fmt.Println(s)
+
+	// We can also append a list to a list.
+	g := []int{5, 6, 7}
+	s = append(s, g...)
+	fmt.Println(s)
 }

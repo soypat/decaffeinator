@@ -6,6 +6,8 @@ pub fn sqrt(allocator: Allocator, x:f64) ![]u8 {
     var result = try allocator.alloc(u8, 40);
     if (x < 0) {
         result = try std.fmt.bufPrint(result, "{}", .{std.math.sqrt(-x)});
+     } else if (x == 0) {
+        result = "0";
      } else {
         result = try std.fmt.bufPrint(result, "{}", .{std.math.sqrt(x)});
      }

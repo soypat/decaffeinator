@@ -10,11 +10,17 @@ import (
 	"time"
 )
 
+const (
+	imageSize = 500
+	agents    = 160
+	agentSize = imageSize / 20
+)
+
 func main() {
 	seed := time.Now().Unix() % 1000
 	rand.Seed(seed)
 	fmt.Println("agentart.png from seed", seed)
-	art := NewRandomArt(500, 500, 160)
+	art := NewRandomArt(imageSize, imageSize, agents)
 	fp, _ := os.Create("agentart.png")
 	err := png.Encode(fp, art)
 	if err != nil {
@@ -47,7 +53,7 @@ func NewRandomArt(width, height, agents int) Art {
 		art.agents[i] = Agent{
 			posx: rand.Intn(width),
 			posy: rand.Intn(height),
-			size: rand.Intn(width/20) + 1,
+			size: rand.Intn(agentSize) + 1,
 			c:    color.RGBA{R: uint8(rand.Intn(255)), G: uint8(rand.Intn(255)), B: uint8(rand.Intn(255)), A: 255},
 		}
 	}
