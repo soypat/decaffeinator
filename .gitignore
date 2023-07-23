@@ -47,9 +47,12 @@
 
 # Generated
 *.pdf
-*.md
 *.tex
 *.zip
+tagalong/tagalong.md
+tagalong/tagalong_w_zig.md
+tagalong/tagalong.md
+tagalong/tagalongCode.md
 
 ## Build tool directories for auxiliary files
 # latexrun
