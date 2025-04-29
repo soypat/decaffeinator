@@ -1,22 +1,33 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math"
+	"math/rand"
 	"os"
+	"time"
 )
 
-func main() {
-	fp, _ := os.Open("redshirt.png")
-	img, _ := png.Decode(fp)
-	fp.Close()
-	newshirt, _ := os.Create("newshirt.png")
-	defer newshirt.Close()
+//go:embed redshirt.png
+var redshirt []byte
 
+const newFile = "newshirt.png"
+
+func main() {
+	seed := time.Now().Unix() % 1000
+	rng := rand.New(rand.NewSource(seed))
+	img, _ := png.Decode(bytes.NewReader(redshirt))
+
+	newshirt, _ := os.Create(newFile)
+	defer newshirt.Close()
+	fmt.Printf("creating shirt with new hue with seed %d at %q\n", seed, newFile)
 	// First layer is the color switched shirt.
-	h := newHue(.9)
+	h := newHue(rng.Float64())
 	layer1 := overlay{
 		img,
 		func(x, y int, c color.Color) color.Color {
@@ -56,6 +67,16 @@ func abs(a int) int {
 	return a
 }
 
+type ImageHued struct {
+	image.Image
+	hue
+}
+
+func (l ImageHued) At(x, y int) color.Color {
+	c := l.Image.At(x, y)
+	return huedColor{h: &l.hue, Color: c}
+}
+
 type overlay struct {
 	image.Image
 	ol func(x, y int, c color.Color) color.Color
@@ -85,21 +106,9 @@ func newHue(turns float64) hue {
 	return h
 }
 
-type huedColor struct {
-	Color color.Color
-	h     *hue
-}
-
-func (hc huedColor) RGBA() (r, g, b, a uint32) {
-	r, g, b, a = hc.Color.RGBA()
-	if a != 0 {
-		r, g, b = hc.h.apply(r, g, b)
-	}
-	return r, g, b, a
-}
-
 type hue [3][3]float32
 
+// apply is the low level hue algorithm implementation of a hue application.
 func (h *hue) apply(r, g, b uint32) (uint32, uint32, uint32) {
 	rf, gf, bf := float32(r), float32(g), float32(b)
 	rx := rf*h[0][0] + gf*h[0][1] + bf*h[0][2]
@@ -115,4 +124,17 @@ func clamp(v float32) uint32 {
 		return math.MaxUint16
 	}
 	return uint32(v + 0.5)
+}
+
+type huedColor struct {
+	Color color.Color
+	h     *hue
+}
+
+func (hc huedColor) RGBA() (r, g, b, a uint32) {
+	r, g, b, a = hc.Color.RGBA()
+	if a != 0 {
+		r, g, b = hc.h.apply(r, g, b)
+	}
+	return r, g, b, a
 }

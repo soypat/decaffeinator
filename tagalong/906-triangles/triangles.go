@@ -34,8 +34,9 @@ type SDFDrawing struct {
 
 func (s SDFDrawing) At(i, j int) color.Color {
 	v := vec2{x: float64(i), y: float64(j)}
-	for i := range s.sdfs {
-		if value := s.sdfs[i](v); value < 0 {
+	for _, sdf := range s.sdfs {
+		if value := sdf(v); value < 0 {
+			// is inside of the triangle.
 			g := uint8(i) % 3
 			b := uint8(i) % 4
 			return color.RGBA{R: uint8(0xff + int(value)), G: g * 64, B: b * 64, A: 0xff}
@@ -51,6 +52,8 @@ func (s SDFDrawing) ColorModel() color.Model { return color.RGBAModel }
 type vec2 struct{ x, y float64 }
 
 // TriangleSDF returns the signed distance function for a 2D triangle with vertices at the given points.
+// An SDF returns the minimum euclidean distance to the shape for an input point.
+// The distance for this SDF implementation is negative inside of the triangle.
 // MIT license. Copyright © 2014 Inigo Quilez, https://www.shadertoy.com/view/XsXSz4
 func TriangleSDF(p0, p1, p2 vec2) func(vec2) float64 {
 	return func(p vec2) float64 {

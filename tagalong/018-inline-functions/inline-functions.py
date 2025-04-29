@@ -12,11 +12,13 @@ def SuperRandom(normalRandom:lambda:int) -> int:
 # the lambda keyword, though its limited to
 # one-liners so we can't really use it here.
 # We do with a simple def.
-a = 287117
+a = 1
 def notSoRand()->int:
     global a
     a = a * 7
     return a
+
+print(notSoRand(), notSoRand())
 
 superrand1 = SuperRandom(notSoRand)
 superrand2 = SuperRandom(notSoRand)

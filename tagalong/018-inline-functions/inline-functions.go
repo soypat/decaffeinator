@@ -3,16 +3,18 @@ package main
 import "fmt"
 
 func main() {
-	a := 287117
+	a := 1
 	notSoRand := func() int {
 		a = a * 7
 		return a
 	}
-	superrand1 := SuperRandom(notSoRand)
-	superrand2 := SuperRandom(notSoRand)
-	superrand3 := SuperRandom(notSoRand)
+	call1 := notSoRand()
+	call2 := notSoRand()
+	fmt.Println("calling function yields different results:", call1, call2)
 
-	fmt.Println(superrand1, superrand2, superrand3)
+	superrand1 := SuperRandom(notSoRand)
+	superrand2 := SuperRandom(staticRandom)
+	fmt.Println("a function can take another function as argument:", superrand1, superrand2)
 }
 
 // SuperRandom returns a super random number using a
@@ -25,4 +27,8 @@ func SuperRandom(normalRandom func() int) int {
 		superrand = superrand*7 + rand*31
 	}
 	return superrand
+}
+
+func staticRandom() int {
+	return 4
 }

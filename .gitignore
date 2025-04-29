@@ -2,7 +2,7 @@
 *.png
 *__debug_bin
 
-!tagalong/900-images/redshirt.png
+!tagalong/908-shirthues/redshirt.png
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
@@ -49,9 +49,8 @@
 *.pdf
 *.tex
 *.zip
-tagalong/tagalong.md
+
 tagalong/tagalong_w_zig.md
-tagalong/tagalong.md
 tagalong/tagalongCode.md
 
 ## Build tool directories for auxiliary files
@@ -288,3 +287,6 @@ TSWLatexianTemp*
 
 # Makeindex log files
 *.lpz
+
+# Desired images
+!mandelbrot.png

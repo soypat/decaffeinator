@@ -7,6 +7,6 @@ pub fn main() void {
     while (i < 10) {
         sum += i;
         i+=1;
+        std.debug.print("{}\n", .{sum});
     }
-    std.debug.print("{}\n", .{sum});
 }

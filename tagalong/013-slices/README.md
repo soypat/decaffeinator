@@ -35,6 +35,23 @@ a[0:]
 a[:]
 ```
 
+## Slice length and capacity
+Slices are defined by a pointer to the start of their data and two other fields: **Length** and **Capacity**. The length of a slice gives users knowledge of the accesible/useful data in a slice. The capacity is a property used primarily by the garbage collector to determine the available space in the slice before needing to allocate a new slice when adding elements to the end of a slice with `append` (more on that later). 
+
+Use the builtins `len` and `cap` to get the length and capacity of a slice, respectively:
+```go
+var a [10]int
+len(a[:])  // 10
+len(a[:0]) // 0
+len(a[:8]) // 8
+len(a[9:]) // 1
+
+cap(a[:])  // 10
+cap(a[:0]) // 10
+cap(a[:8]) // 10
+cap(a[9:]) // 1
+```
+
 ## Slice literals
 A slice literal is like an array literal without the length.
 
@@ -75,7 +92,7 @@ b = b[1:]      // len(b)=4, cap(b)=4
 ```
 
 ## Slice of slices
-Slices can contain any type, including other slices.
+Slices can contain any type, including other slices... and those slices can contain more slices, and so on:
 ```go
 	// Create a tic-tac-toe board.
 	board := [][]string{
