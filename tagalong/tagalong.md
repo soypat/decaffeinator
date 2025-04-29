@@ -81,7 +81,7 @@ func main() {
 ```
 **Output**:
 ```plaintext
-My favorite number is 4 and 3.141592653589793
+My favorite number is 2 and 3.141592653589793
 ```
 
 # Functions
@@ -835,6 +835,8 @@ if free >= newElements {
     println("not enough space!")
 }
 ```
+
+
 ### Python (append)
 ```python
 s = []
@@ -1063,7 +1065,149 @@ map[Billy:12 Faustus:66 Jeremiah:99 John Baptist:47 Sarah:32]
 ```
 
 # Pointers
-TODO
+You may have or not heard of pointers, the famous core concept of many programming languages.
+
+## What are they, from a functional perspective
+Pointers allow a calling function access to memory outside of what is defined in its stack frame- so variables outside of the scope that have been defined in the function. In C-like languages pointer types are expressed with an asterisk around the type the pointer would reference:
+
+```go
+// add2 receives a pointer that references an integer.
+func add2(p *int)
+```
+
+The function `add2` is free to read or write to the integer at p's address. 
+
+To read the address at 
+
+One reads from a pointer by "dereferencing" the address with the asterisk operator.
+
+```go
+var value int = *p
+```
+
+Similarly, we may assign to the address by dereferencing the pointer in the same way we read from it:
+```go
+*p = 2
+```
+
+So, the function which adds 2 to an integer given the integer's address could look like so:
+
+```go
+func add2(p *int) {
+    currentValue := *p
+    newValue := currentValue+2
+    *p = newValue
+}
+```
+
+If the price of a line of code is unnafordable then we can use the plus-equal operator:
+
+```go
+func add2(p *int) {
+    *p += 2
+}
+```
+
+## Caveats
+
+Here are some myths you may have heard regarding pointers:
+- **Myth**: Pointers are faster
+- **Myth**: Pointers are slower
+- **Myth**: Use pointers for structs
+- **Myth**: Use pointers when you want functions to modify the arguments
+
+Computers are extremely complex systems, there is not one-fits-all rule for using pointers. This is not to discourage the use of pointers, by all means **use them, and use them alot**! This is the best way to learn how they work. But if you are building something complex and can do without pointers, consider omitting their use to avoid bugs that can come along with the added complexity of pointers.
+
+There is one clear-cut use case for pointers in Go and that is to implement interfaces that require modifying the receiver's data. More on that in the interfaces section.
+- **Fact**: Use pointer receivers when implementing interfaces which require modifying the receiver's data.
+### Python (pointers)
+```python
+# The simplest case where one can observe
+# pointer action in Python is with lists.
+def doSomething(thelist):
+    thelist.append(3)
+
+l = [0, 1]
+
+doSomething(l)
+print(l) # prints [0, 1, 3]
+# This happens because lists in Python
+# have a pointer which is passed to functions
+# allowing functions to modify data.
+```
+### Go (pointers)
+```go
+package main
+
+import "fmt"
+
+func main() {
+	value := 1
+	doNothing(value)
+	fmt.Println(value)
+	ptr := &value
+	doOp(ptr)
+	fmt.Println(ptr, *ptr)
+}
+
+func doNothing(v int) {
+	v = 23
+}
+
+func doOp(v *int) {
+	*v = 23
+}
+
+```
+**Output**:
+```plaintext
+1
+0xc000118040 23
+```
+
+# Pointers and Slices
+In Go slices are "fat pointers", which is to say they are not a pointer in itself but rather a struct that contains a pointer and length data.
+
+This makes them less pointery than equivalent data structures in other languages such as Python's `List` type which allow a function to modify the caller's list from inside the function.
+
+Due to the "fat" nature of Go's slices it is common for a function that modifies a slice's length to return the resulting slice, just like the `append` function. This is a widespread pattern in the Go ecosystem as well as in the standard library. See the [`strconv.Append`](https://pkg.go.dev/strconv#AppendInt) family of functions as well as the [`fmt.Appendf`](https://pkg.go.dev/fmt#Appendf) function.
+
+
+### Python (pointerslice)
+```python
+def append3(List):
+    List.append(3)
+
+l = [0, 1]
+append3(l)
+print(l)
+```
+### Go (pointerslice)
+```go
+package main
+
+import "fmt"
+
+func append3(s []int) {
+	s = append(s, 3)
+}
+
+func main() {
+	l := []int{0, 1}
+	append3(l)
+	fmt.Println(l)
+
+	_ = append(l, 3) // result discarded.
+	fmt.Println(l)
+}
+
+```
+**Output**:
+```plaintext
+[0 1]
+[0 1]
+```
+
 # Inline functions
 Go's functions are what is known as "First class citizens". This is just a fancy way
 of saying functions are also values in Go and can be treated the same way as integers and strings.
@@ -1257,5 +1401,279 @@ func staticRandom() int {
 ```plaintext
 calling function yields different results: 7 49
 a function can take another function as argument: 4236130605 4234574622
+```
+
+# Methods
+If coming from a language with rich OOP features Go may begin to feel sparse at this point. In Go what we call methods don't really bring any added functionality to the table over functions. A method is just that, a function with an extra "receiver" argument.
+
+We declare methods by writing `func` followed by parentheses containing the receiver identifier and type, the rest of the function declaration follows as normal after that point:
+
+```go
+func (self RectangleClass) Area() int
+```
+
+Some observations:
+
+- **Package level scope:** Methods are declared at the same scope as package level functions.
+
+- **Sub-package namespacing:** Methods can only be called on the type using dot notation. Thus they are useful for not cluttering the package namespace.
+
+- **Exporting: public/private**: Just like with all package-level identifiers, the method is exported if it starts with a upper case letter
+
+- **Pointer receivers:** We can define our receiver to be a pointer type or non-pointer type
+
+- **Receiver type limits:** You can only define methods on type defined in the local package. If you so desire to have your own methods next to the foreign type you may decide to go the struct embedding route (see Go's struct embedding).
+
+## Interfaces
+Methods are revealed to be an unexpecedly powerful feature when interfaces are introduced. Interfaces are the equivalent of typing.Protocol in Python.
+
+
+### Python (methods)
+```python
+class Rectangle:
+    def __init__(self, width: float, height: float) -> None:
+        self.width = width
+        self.height = height
+
+    def area(self) -> float:
+        return self.width * self.height
+
+    def perim(self) -> float:
+        return 2 * (self.width + self.height)
+
+    def scale(self, factor: float) -> None:
+        self.width *= factor
+        self.height *= factor
+
+
+if __name__ == "__main__":
+    r = Rectangle(12.7, 10.0)
+    print("area [mm²]:", r.area())
+    print("perimeter [mm]:", r.perim())
+
+    r.scale(1 / 25.4)
+    print("area [in²]:", r.area())
+    print("perimeter [in]:", r.perim())
+
+```
+### Go (methods)
+```go
+package main
+
+import "fmt"
+
+type rectangle struct {
+	width  float64
+	height float64
+}
+
+func (r rectangle) area() float64 {
+	return r.width * r.height
+}
+
+func (r rectangle) perim() float64 {
+	return 2*r.width + 2*r.height
+}
+
+func (r *rectangle) scale(scale float64) {
+	r.height *= scale
+	r.width *= scale
+}
+
+func main() {
+	r := rectangle{width: 12.7, height: 10}
+	fmt.Println("area [mm²]:", r.area())
+	fmt.Println("perimeter [mm]:", r.perim())
+
+	// Convert to inches.
+	r.scale(1. / 25.4)
+	fmt.Println("area[inches²]:", r.area())
+	fmt.Println("perim[inches]:", r.perim())
+}
+
+```
+**Output**:
+```plaintext
+area [mm²]: 127
+perimeter [mm]: 45.4
+area[inches²]: 0.19685039370078736
+perim[inches]: 1.7874015748031495
+```
+
+# Interfaces
+Interfaces in Go provide a way to define behaviour for a undefined type that has a set of methods. This is how the ubiquitous [`io.Reader`](https://pkg.go.dev/io#Reader) interface is implemented in the Go standard library.
+
+```go
+type Reader interface {
+	Read(p []byte) (n int, err error)
+}
+```
+
+`io.Reader` is world famous. It appears in nearly every single Go project, either directly or indirectly. This is because it is implemented or used by a large part of the standard library to represent any of the following:
+
+- [A file](https://pkg.go.dev/os#File.Read)
+- [A byte buffer](https://pkg.go.dev/bytes#Buffer.Read)
+- [A TCP network stream](https://pkg.go.dev/net#TCPConn.Read)
+- [An HTTP body](https://pkg.go.dev/net/http#Request)
+- [An HTTP Multipart form file](https://pkg.go.dev/mime/multipart#Part.Read)
+- [A Zip file header](https://pkg.go.dev/archive/zip#File.OpenRaw)
+- [A Targz entry](https://pkg.go.dev/archive/tar#Reader.Read)
+- And so much more
+
+To get an idea of how powerful this is, imagine you wrote an algorithm to parse a special format- maybe it's a new programming language you are writing. You only need to define one function that takes in an `io.Reader` and write the logic for it once. From then on that function can take in any of the aforementioned data streams (a OS file, HTTP Body, a zipped archive, a raw TCP stream, etc.)
+
+```go
+func ParseFormat(r io.Reader) Format
+```
+
+The underlying function needs absolutely no knowledge about the underlying implementation. It relieves the programmer of a lot of thinking. 
+
+The effect is also multiplicative- since the type is so ubiquitous in the standard library most open source libraries also implement the interface for their types leading to practically infinite combinations of ways to call functions that receive an `io.Reader` type.
+
+## Comparison with other languages
+Interfaces are the way Go goes about structural typing polymorphism. Similar concepts exist in most common languages but usually by other names:
+- Python's `typing.Protocol`
+- Typescript's `protocol`
+
+Other languages do something similar to Go but require additional work of specifying the interface that is implemented. This is known as Nominal typing polymorphism
+
+- Java's `interface`
+- Rust's `trait`
+- C#'s `interface`
+- Python's `typing.ABC`
+
+## Observations
+
+- **Keep it simple:** Strive for simplicity to see your interfaces suceed in use. The Go standard library's most succesful interfaces have a single method, these are the famous "single method interfaces". Even the [embedded system interfaces of TinyGo](https://github.com/tinygo-org/drivers/blob/release/i2c.go#L5) are single method interfaces!
+- **Automatic satisfaction**: In more ways than one. You don't need to write `implements` declarations explcitly saying what interface is being implemented by a method. In Go interfaces are implemented as soon as you write out the last method required to implement a method set.
+- **Type assertion:** In Go you can convert an interface to its concret type. Always use the two parameter return to avoid panics in conversion: `c, ok := v.(MyInterface)`
+- **Empty interface or any:** The any interface is implemented by all types. This type is useless unless using `reflect` to introspect it or trying type assertions, like `fmt.Println` does.
+- **Nil panics:** Calling a method on a nil interface will panic.
+- **Nil interface vs nil subtype:** A very confusing pitfall. An interface is nil as long as it has not subtype assigned. As soon as there's a subtype associated to it a nil check will return false even though the underlying pointer is nil.
+
+```go
+var a any
+var i *int
+fmt.Println(a, i, a==nil) // <nil> <nil> true
+a = i
+fmt.Println(a, a==nil) // <nil> false
+```
+### Python (interfaces)
+```python
+import math
+from typing import Protocol, Tuple
+
+class Geometry(Protocol):
+    def area(self) -> float: ...
+    def perim(self) -> float: ...
+
+class Rectangle:
+    def __init__(self, width: float, height: float) -> None:
+        self.width = width
+        self.height = height
+    def area(self) -> float:
+        return self.width * self.height
+    def perim(self) -> float:
+        return 2 * (self.width + self.height)
+
+class Circle:
+    def __init__(self, radius: float) -> None:
+        self.radius = radius
+    def area(self) -> float:
+        return math.pi * self.radius ** 2
+    def perim(self) -> float:
+        return 2 * math.pi * self.radius
+
+def shape_efficiency(g: Geometry) -> float:
+    return g.area() / g.perim()
+
+def detect_circle(g: Geometry) -> Tuple[float, bool]:
+    if isinstance(g, Circle):
+        return g.radius, True
+    return 0.0, False
+
+if __name__ == "__main__":
+    rect = Rectangle(1, 4)
+    square = Rectangle(4, 4)
+    c = Circle(4)
+
+    print("1x4 rectangle efficiency:", shape_efficiency(rect))
+    print("square efficiency:", shape_efficiency(square))
+    print("circle efficiency:", shape_efficiency(c))
+
+    print(detect_circle(rect))
+    print(detect_circle(c))
+
+```
+### Go (interfaces)
+```go
+package main
+
+import (
+	"fmt"
+	"math"
+)
+
+type geometry interface {
+	area() float64
+	perim() float64
+}
+
+type rectangle struct {
+	width, height float64
+}
+
+type circle struct {
+	radius float64
+}
+
+func (r rectangle) area() float64 {
+	return r.width * r.height
+}
+func (r rectangle) perim() float64 {
+	return 2*r.width + 2*r.height
+}
+
+func (c circle) area() float64 {
+	return math.Pi * c.radius * c.radius
+}
+func (c circle) perim() float64 {
+	return 2 * math.Pi * c.radius
+}
+
+func shapeEfficiency(g geometry) float64 {
+	// Area enclosed per unit perimeter used.
+	return g.area() / g.perim()
+}
+
+func detectCircle(g geometry) (radius float64, isCircle bool) {
+	c, isCircle := g.(circle)
+	if isCircle {
+		return c.radius, true
+	}
+	return 0, false
+}
+
+func main() {
+	rect := rectangle{width: 1, height: 4}
+	square := rectangle{width: 4, height: 4}
+	c := circle{radius: 4}
+
+	fmt.Println("1x4 rectangle efficiency:", shapeEfficiency(rect))
+	fmt.Println("square efficiency:", shapeEfficiency(square))
+	fmt.Println("circle efficiency:", shapeEfficiency(c))
+
+	fmt.Println(detectCircle(rect))
+	fmt.Println(detectCircle(c))
+}
+
+```
+**Output**:
+```plaintext
+1x4 rectangle efficiency: 0.4
+square efficiency: 1
+circle efficiency: 2
+0 false
+4 true
 ```
 
